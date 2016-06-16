@@ -2,14 +2,14 @@ package calculate
 
 import (
 	"database/sql"
+	"fmt"
+	_ "github.com/go-sql-driver/mysql"
 	"strconv"
 	"strings"
 	"time"
 	. "wanbu_stat_zzmm/src/config"
 	. "wanbu_stat_zzmm/src/logs"
 	. "wanbu_stat_zzmm/src/utils"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -113,14 +113,18 @@ func LoopRefresh() {
 }
 
 func DelCredit(userid int, walkdate int64, aid int) (err error) {
+
 	sql_ := "delete from wanbu_member_credit where taskid = -99 and userid = ? and walkdate = ? and activeid = ?"
 	result, err := db.Exec(sql_, userid, walkdate, aid)
+
+	sql := fmt.Sprintf("delete from wanbu_member_credit where taskid = -99 and userid = %d and walkdate = %d and activeid = %d", userid, walkdate, aid)
+
 	if err != nil {
-		Logger.Debug("Execute SQL Error : ", err, " [Sql] : ", sql_)
+		Logger.Debug("Execute SQL Error : ", err, " [Sql] : ", sql)
 	} else {
 		ra, _ := result.RowsAffected()
 		if ra == 0 {
-			Logger.Debug("Failed Delete [SQL] ", sql_)
+			Logger.Debug("Failed Delete [SQL] ", sql)
 		}
 	}
 	//fmt.Println("delete old ", err)
