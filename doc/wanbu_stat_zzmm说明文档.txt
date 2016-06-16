@@ -1,0 +1,51 @@
+升级内容：
+
+支持个性化朝暮活动统计—-
+
+针对此次需求各模块的修改如下：
+
+1.Javaserver增加socket消息（自定义基础数据上传数据格式）
+2.新增个性化朝暮规则处理模块，功能如下：
+* 个性化朝暮奖励积分计算：
+对接JavaServer传过来的msg,过滤给定excel中的名单列表，UID在列表中的解析msg，根据配置文件指定的规则计算朝暮奖励积分，
+结果写入wanbu_member_credit，触发数据写入wanbu_data_userupload_queue，部署单独的统计模块对接wanbu_data_userupload_queue
+* 刷数据：
+刷数据场景：修改了活动规则、出现错误数据、和手动刷数据时
+
+3.修改统计分发模块的配置文件，使分发模块忽略此活动，将此活动的触发数据触发到一个废弃的触发表中（wanbu_data_ignor_queue）
+4.修改统计模块，使得统计模块轮询wanbu_data_userupload_queue表
+
+
+新增表建表语句：
+CREATE TABLE `wanbu_data_zmrefresh_queue` (
+  `uploadid` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `activeid` mediumint(8) NOT NULL,
+  `userid` mediumint(8) NOT NULL,
+  `walkdate` int(10) unsigned NOT NULL,
+  `timestamp` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`uploadid`)
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=gbk;
+
+
+CREATE TABLE `wanbu_data_userupload_queue` (
+  `uploadid` int(9) NOT NULL AUTO_INCREMENT,
+  `userid` mediumint(8) NOT NULL,
+  `groupid` mediumint(8) NOT NULL,
+  `activeid` mediumint(8) NOT NULL,
+  `starttime` int(10) unsigned NOT NULL DEFAULT '0',
+  `endtime` int(10) unsigned NOT NULL DEFAULT '0',
+  `timestamp` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`uploadid`)
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=gbk;
+
+
+CREATE TABLE `wanbu_data_ignor_queue` (
+  `uploadid` int(9) NOT NULL AUTO_INCREMENT,
+  `userid` mediumint(8) NOT NULL,
+  `groupid` mediumint(8) NOT NULL,
+  `activeid` mediumint(8) NOT NULL,
+  `starttime` int(10) unsigned NOT NULL DEFAULT '0',
+  `endtime` int(10) unsigned NOT NULL DEFAULT '0',
+  `timestamp` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`uploadid`)
+) ENGINE=MyISAM AUTO_INCREMENT=0 DEFAULT CHARSET=gbk;

@@ -1,0 +1,70 @@
+package main
+
+import (
+	//. "activemaster/logs"
+	. "activemaster/calculate"
+	. "activemaster/socket"
+	//. "activemaster/utils"
+	"fmt"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	//"time"
+)
+
+var (
+	Version = "1.0.03PR1"
+)
+
+func processmsg() error {
+	//go Watching()
+	DbInit()
+	LoadRules()
+
+	go ZMRefresh() //刷数据接口
+	for {
+
+		uwd := <-Userwalkdata_chan
+		fmt.Println("uid upload msg : ", uwd.Uid)
+		//todo..过滤消息，LOAD文件中的UID，是否在这里。。
+		go StatZM(&uwd)
+	}
+	return nil
+}
+
+func init() {
+
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	go func() {
+		sig := <-sigc
+		switch sig {
+		case syscall.SIGINT:
+			fmt.Println("catch SIGINT ")
+			os.Exit(1)
+		case syscall.SIGQUIT:
+			fmt.Println("handle SIGQUIT")
+			os.Exit(1)
+		}
+	}()
+
+}
+
+func main() {
+
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
+
+	go func() {
+		processmsg()
+	}()
+
+	select {}
+}

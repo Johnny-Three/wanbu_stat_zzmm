@@ -1,0 +1,40 @@
+package config
+
+import (
+	"flag"
+	"strconv"
+	"strings"
+
+	config "github.com/msbranco/goconfig"
+)
+
+var (
+	DBConfig    string
+	XlsxPath    string
+	Activeids   = []int{}
+	HOST        string
+	config_path = flag.String("f", "../conf/config.conf", "config path")
+)
+
+func init() {
+	flag.Parse()
+	cf, _ := config.ReadConfigFile(*config_path)
+	HOST, _ = cf.GetString("SERVER", "HOST")
+	rdip1, _ := cf.GetString("DBCONN1", "IP")
+	rdusr1, _ := cf.GetString("DBCONN1", "USERID")
+	rdpwd1, _ := cf.GetString("DBCONN1", "USERPWD")
+	rdname1, _ := cf.GetString("DBCONN1", "DBNAME")
+
+	DBConfig = rdusr1 + ":" + rdpwd1 + "@tcp(" + rdip1 + ")/" + rdname1 + "?charset=utf8"
+	XlsxPath, _ = cf.GetString("PATH", "XlSX")
+	ids, _ := cf.GetString("INFO", "ACTIVE")
+	getActives(ids)
+}
+
+func getActives(ids string) {
+	aids := strings.Split(ids, ",")
+	for _, aid := range aids {
+		id, _ := strconv.Atoi(aid)
+		Activeids = append(Activeids, id)
+	}
+}

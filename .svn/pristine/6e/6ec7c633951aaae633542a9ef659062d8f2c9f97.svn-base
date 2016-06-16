@@ -1,0 +1,250 @@
+package calculate
+
+import (
+	. "activemaster/config"
+	. "activemaster/logs"
+	. "activemaster/socket"
+	. "activemaster/utils"
+	//"fmt"
+	"strconv"
+)
+
+var (
+	rules      map[int]*ZM  //{ruleid : ruleinfo}
+	activeinfo *ActiveInfo  // must restart moudle once change active info
+	user2rule  map[int]int  //{userid, ruleid}
+	uidsNil    map[int]bool ////userids has no rules
+)
+
+type Refresh struct {
+	Userid   int
+	Activeid int
+	Walkdate int64
+	Uploadid int64
+}
+
+type ZMRule struct {
+	Start     int
+	End       int
+	Condition int
+	Credit    int
+}
+
+type ZM struct {
+	Mor  ZMRule
+	Mid  ZMRule
+	Moon ZMRule
+}
+
+type ActiveInfo struct {
+	Activeid        int
+	StartTime       int64
+	EndTime         int64
+	PreStartTime    int64
+	PreEndTime      int64
+	ZmCondition     int
+	ZmUpline        int
+	Credit2Distance float32
+	Systemflag      int
+}
+
+func init_() {
+	rules = make(map[int]*ZM)     //{ruleid : ruleinfo}
+	activeinfo = &ActiveInfo{}    // must restart moudle once change active info
+	user2rule = make(map[int]int) //{userid, ruleid}
+	uidsNil = make(map[int]bool)
+}
+
+func (z *ZM) ZMCredit(hour_data []int) (credit int) {
+	credit = 0
+	mor, mid, moon := 0, 0, 0
+	if len(hour_data) < 24 {
+		Logger.Debug("Error Hour Data Less Than 24")
+	} else {
+		for hour, data := range hour_data {
+			if hour >= z.Mor.Start && hour <= z.Mor.End {
+				mor += data
+			}
+			if hour >= z.Mid.Start && hour <= z.Mid.End {
+				mid += data
+			}
+			if hour >= z.Moon.Start && hour <= z.Moon.End {
+				moon += data
+			}
+		}
+		if mor >= z.Mor.Condition {
+			credit += z.Mor.Credit
+		}
+		if mid >= z.Mid.Condition {
+			credit += z.Mid.Credit
+		}
+		if moon >= z.Moon.Condition {
+			credit += z.Moon.Credit
+		}
+	}
+	return credit
+}
+
+func LoadRules() {
+	init_()
+	PharseFile(XlsxPath, rules, activeinfo, uidsNil, user2rule)
+	err := GetActiveInfo(activeinfo)
+	if err != nil {
+		Logger.Info("Active Info Error ", activeinfo)
+	}
+	//Logger.Debug(uidsNil)
+}
+
+func StatZM(uw *User_walkdays_struct) {
+
+	if zmruleid, ok := user2rule[uw.Uid]; !ok {
+		if _, ok := uidsNil[uw.Uid]; !ok {
+			Logger.Debug("User Out Of Active ", uw.Uid)
+			AddDeal()
+			return
+		} else {
+			Logger.Debug("User Out Of Rules ", uw.Uid)
+		}
+	} else {
+		for _, wk := range uw.Walkdays {
+			if (wk.WalkDate >= activeinfo.StartTime && wk.WalkDate <= activeinfo.EndTime) || (wk.WalkDate >= activeinfo.PreStartTime && wk.WalkDate <= activeinfo.PreEndTime) {
+				if wk.Daydata >= activeinfo.ZmCondition {
+					if zmrule, ok := rules[zmruleid]; ok {
+						credit := zmrule.ZMCredit(wk.Hourdata)
+						if credit > activeinfo.ZmUpline {
+							credit = activeinfo.ZmUpline
+						}
+						err := DelCredit(uw.Uid, wk.WalkDate)
+						if err == nil {
+							genCredit(uw.Uid, activeinfo.Activeid, credit, wk.WalkDate)
+							Logger.Info("Stated Credit Userid ", uw.Uid, " Walkdate ", wk.WalkDate)
+						} else {
+							Logger.Info("Delete old credit records error when StatZM op")
+						}
+					} else {
+						Logger.Info("Invalid zmruleid")
+					}
+
+				}
+
+			} else {
+				Logger.Debug("Invalid Walkdate ", wk.WalkDate, uw.Uid)
+			}
+		}
+	}
+	addTrigger(uw)
+	//AddDeal()
+}
+
+func addTrigger(uw *User_walkdays_struct) {
+
+	start, end := getStartEnd(uw)
+	if start != 0 && end != 0 {
+		gids, err := GetGroupId(activeinfo.Activeid, uw.Uid)
+		if err == nil {
+			for _, gid := range gids {
+				genTrigger(uw.Uid, activeinfo.Activeid, gid, start, end)
+				Logger.Info("Stated Trigger Userid ", uw.Uid, " Groupid ", gid, " Walkdate ", start, " -- ", end)
+			}
+		} else {
+			Logger.Info("Get GroupInfo Error UserId : ", uw.Uid)
+		}
+
+	} else {
+		Logger.Debug("Error upload walkdate UserId : ", uw.Uid)
+	}
+
+}
+
+func getStartEnd(uw *User_walkdays_struct) (start, end int64) {
+	start, end = 0, 0
+	for i, wd := range uw.Walkdays {
+		if i == 0 {
+			start, end = wd.WalkDate, wd.WalkDate
+		} else {
+			if start > wd.WalkDate {
+				start = wd.WalkDate
+			}
+			if end < wd.WalkDate {
+				end = wd.WalkDate
+			}
+		}
+	}
+	return start, end
+}
+
+func genCredit(userid, activeid, credit int, walkdate int64) {
+	sql := "INSERT INTO `wanbu`.`wanbu_member_credit` ( `userid`,`activeid`, `walkdate`, `credit`, `timestamp`, `taskid`, `reason`) VALUES "
+	sql += "(" + strconv.Itoa(userid) + ", " + strconv.Itoa(activeid) + ", " + strconv.FormatInt(walkdate, 10) + ", " + strconv.Itoa(credit) + ", UNIX_TIMESTAMP(), -99, 'zm')"
+	//fmt.Println("genCredit", sql)
+	Sql_ch <- sql
+}
+
+func genTrigger(userid, activeid, groupid int, start, end int64) {
+	sql := "INSERT INTO `wanbu`.`wanbu_data_userupload_queue` (`userid`,`activeid`,`groupid`,`starttime`,`endtime`, `timestamp`) VALUES "
+	sql += "(" + strconv.Itoa(userid) + "," + strconv.Itoa(activeid) + "," + strconv.Itoa(groupid) + "," + strconv.FormatInt(start, 10) + "," + strconv.FormatInt(end, 10) + ", UNIX_TIMESTAMP())"
+	//fmt.Println("genTrigger", sql)
+	Sql_ch <- sql
+}
+
+func ZMRefresh() {
+	go LoopRefresh()
+	for {
+		select {
+		case data := <-Refresh_ch:
+			DoRefresh(data)
+			go DelQueue(data.Uploadid)
+		}
+	}
+}
+
+func DoRefresh(data *Refresh) {
+	DelCredit(data.Userid, data.Walkdate)
+	if data.Activeid != activeinfo.Activeid { //非本活动
+		Logger.Info("[Refresh] Invalid Activeid ", data.Userid)
+		return
+	}
+	if zmruleid, ok := user2rule[data.Userid]; !ok {
+		//DelCredit(data.Userid, data.Walkdate)
+		if _, ok := uidsNil[data.Userid]; !ok { //不在规则方案文档中
+			Logger.Debug("[Refresh] User Out Of Active ", data.Userid)
+			return
+		}
+	} else { //有对应方案的用户
+		if (data.Walkdate >= activeinfo.StartTime && data.Walkdate <= activeinfo.EndTime) || (data.Walkdate >= activeinfo.PreStartTime && data.Walkdate <= activeinfo.PreEndTime) {
+			wh, sum, err := GetWalkHour(data.Userid, data.Walkdate)
+			if err == nil {
+				if sum >= activeinfo.ZmCondition {
+					if zmrule, ok := rules[zmruleid]; ok {
+						credit := zmrule.ZMCredit(wh)
+						if credit > activeinfo.ZmUpline && activeinfo.ZmUpline > 0 {
+							credit = activeinfo.ZmUpline
+						}
+						//err := DelCredit(data.Userid, data.Walkdate)
+
+						genCredit(data.Userid, data.Activeid, credit, data.Walkdate)
+						Logger.Info("Refreshed Credit Userid ", data.Userid, " Walkdate", data.Walkdate)
+
+					} else {
+						Logger.Info("Invalid zmruleid")
+					}
+				}
+			} else {
+				Logger.Debug("[Refresh] Refresh meet error No WalkHour uid ", data.Userid, " walkdate ", data.Walkdate)
+			}
+		} else {
+			Logger.Debug("[Refresh] Invalid Walkdate ", data.Userid, data.Walkdate)
+		}
+	}
+
+	gids, err := GetGroupId(activeinfo.Activeid, data.Userid)
+	if err == nil {
+		for _, gid := range gids {
+			genTrigger(data.Userid, activeinfo.Activeid, gid, data.Walkdate, data.Walkdate)
+			Logger.Info("Refreshed Trigger Userid ", data.Userid, " Walkdate", data.Walkdate)
+		}
+	} else {
+		Logger.Info("Get GroupInfo Error UserId : ", data.Userid)
+	}
+
+}
