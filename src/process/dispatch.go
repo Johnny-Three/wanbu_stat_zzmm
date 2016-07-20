@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	Version  = "1.0.06PR1"
+	Version  = "1.0.07PR1"
 	consumer *nsq.Consumer
 	err      error
 )

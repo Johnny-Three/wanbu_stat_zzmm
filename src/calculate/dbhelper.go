@@ -20,14 +20,14 @@ var (
 )
 
 func DbInit() {
-	cc_num = 100
+
 	Sql_ch = make(chan string, 0)
 	Refresh_ch = make(chan *Refresh, 0)
 
 	var err error
 	db, err = sql.Open("mysql", DBConfig)
 	CheckError(err)
-	db.SetMaxOpenConns(400)
+	db.SetMaxOpenConns(200)
 	db.SetMaxIdleConns(10)
 	db.Ping()
 
@@ -37,32 +37,24 @@ func DbInit() {
 }
 
 func run() {
-	num := make(chan bool, cc_num)
 
 	for {
 		select {
 		case sql := <-Sql_ch:
-			{
-				num <- true
-				go func(sql string, num chan bool) {
-					result, err := db.Exec(sql)
-					//Logger.Debug(sql)
-					if err != nil {
-						Logger.Debug("Execute SQL Error : ", err, " [Sql] : ", sql)
-					} else {
-						ra, _ := result.RowsAffected()
-						if ra == 0 {
-							Logger.Debug("Failed Insert [SQL] ", sql)
-						}
-					}
 
-					<-num
-				}(sql, num)
+			result, err := db.Exec(sql)
+			//Logger.Debug(sql)
+			if err != nil {
+				Logger.Critical("Execute SQL Error : ", err, " [Sql] : ", sql)
+			} else {
+				ra, _ := result.RowsAffected()
+				if ra == 0 {
+					Logger.Critical("Failed Insert [SQL] ", sql)
+				}
 			}
 		}
 
 	}
-	defer close(num)
 	defer close(Sql_ch)
 }
 

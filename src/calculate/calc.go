@@ -124,7 +124,6 @@ func StatZM(uw *User_walkdays_struct) {
 					} else {
 						Logger.Info("Invalid zmruleid")
 					}
-
 				}
 
 			} else {
