@@ -34,3 +34,9 @@
 2016/07/20 12:39:56 /Users/xiejk/mygo/src/github.com/bitly/go-nsq/consumer.go:1106: INF    1 [base_data_upload/zzmm8858] starting Handler.....
 
 2016/07/20 12:39:56 /Users/xiejk/mygo/src/github.com/bitly/go-nsq/consumer.go:540: INF    1 [base_data_upload/zzmm8858] (192.168.20.8:4150) connecting to nsqd
+
+2016/07/20 13:07:20 /Users/xiejk/mygo/src/github.com/bitly/go-nsq/consumer.go:459: INF    1 [base_data_upload/zzmm8858] querying nsqlookupd http://192.168.20.8:4161/lookup?topic=base_data_upload
+
+2016/07/20 13:07:20 /Users/xiejk/mygo/src/github.com/bitly/go-nsq/consumer.go:1106: INF    1 [base_data_upload/zzmm8858] starting Handler.....
+
+2016/07/20 13:07:20 /Users/xiejk/mygo/src/github.com/bitly/go-nsq/consumer.go:540: INF    1 [base_data_upload/zzmm8858] (192.168.20.8:4150) connecting to nsqd

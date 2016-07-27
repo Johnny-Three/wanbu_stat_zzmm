@@ -174,7 +174,7 @@ func getStartEnd(uw *User_walkdays_struct) (start, end int64) {
 
 func genCredit(userid, activeid, credit int, walkdate int64) {
 	sql := "INSERT INTO `wanbu`.`wanbu_member_credit` ( `userid`,`activeid`, `walkdate`, `credit`, `timestamp`, `taskid`, `reason`) VALUES "
-	sql += "(" + strconv.Itoa(userid) + ", " + strconv.Itoa(activeid) + ", " + strconv.FormatInt(walkdate, 10) + ", " + strconv.Itoa(credit) + ", UNIX_TIMESTAMP(), -99, 'zm')"
+	sql += "(" + strconv.Itoa(userid) + ", " + strconv.Itoa(activeid) + ", " + strconv.FormatInt(walkdate, 10) + ", " + strconv.Itoa(credit) + ", UNIX_TIMESTAMP(), -99, '朝朝暮暮加分')"
 	//fmt.Println("genCredit", sql)
 	Sql_ch <- sql
 }
