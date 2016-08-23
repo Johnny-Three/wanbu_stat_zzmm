@@ -48,7 +48,9 @@ func Decode(msg string) error {
 
 	js, err := simplejson.NewJson([]byte(msg))
 	if err != nil {
-		panic(err.Error())
+
+		//panic(err.Error())
+		Logger.Critical("异常消息,JSON解析出错:", msg)
 	}
 
 	var wd WalkDayData
