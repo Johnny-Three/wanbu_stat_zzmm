@@ -48,7 +48,7 @@ func processmsg() error {
 		uwd := <-Userwalkdata_chan
 		fmt.Println("uid upload msg : ", uwd.Uid)
 		//todo..过滤消息，LOAD文件中的UID，是否在这里。。
-		go StatZM(&uwd)
+		StatZM(&uwd)
 	}
 	return nil
 }

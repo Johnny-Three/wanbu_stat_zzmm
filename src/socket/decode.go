@@ -51,6 +51,7 @@ func Decode(msg string) error {
 
 		//panic(err.Error())
 		Logger.Critical("异常消息,JSON解析出错:", msg)
+		return err
 	}
 
 	var wd WalkDayData
