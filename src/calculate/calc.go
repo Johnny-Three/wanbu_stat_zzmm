@@ -198,7 +198,9 @@ func ZMRefresh() {
 }
 
 func DoRefresh(data *Refresh) {
+
 	DelCredit(data.Userid, data.Walkdate, activeinfo.Activeid)
+
 	if data.Activeid != activeinfo.Activeid { //非本活动
 		Logger.Info("[Refresh] Invalid Activeid ", data.Userid)
 		return
@@ -219,7 +221,6 @@ func DoRefresh(data *Refresh) {
 						if credit > activeinfo.ZmUpline && activeinfo.ZmUpline > 0 {
 							credit = activeinfo.ZmUpline
 						}
-						//err := DelCredit(data.Userid, data.Walkdate)
 
 						genCredit(data.Userid, data.Activeid, credit, data.Walkdate)
 						Logger.Info("Refreshed Credit Userid ", data.Userid, " Walkdate", data.Walkdate)

@@ -138,11 +138,11 @@ func DelQueue(uploadid int64) {
 }
 
 func GetWalkHour(userid int, walkdate int64) (wh_ []int, sum int, err error) {
-	wh := make([]string, 24)
-	wh_ = make([]int, 24)
-	sql_ := "SELECT  `hour0`, `hour1`, `hour2`, `hour3`, `hour4`, `hour5`, `hour6`, `hour7`, `hour8`, `hour9`, `hour10`, `hour11`, `hour12`, `hour13`, `hour14`, `hour15`, `hour16`, `hour17`, `hour18`, `hour19`, `hour20`, `hour21`, `hour22`, `hour23` FROM `wanbu`.`wanbu_data_walkhour` WHERE `userid` = ? AND `walkdate` = ? "
+	wh := make([]string, 26)
+	wh_ = make([]int, 26)
+	sql_ := "SELECT  `hour0`, `hour1`, `hour2`, `hour3`, `hour4`, `hour5`, `hour6`, `hour7`, `hour8`, `hour9`, `hour10`, `hour11`, `hour12`, `hour13`, `hour14`, `hour15`, `hour16`, `hour17`, `hour18`, `hour19`, `hour20`, `hour21`, `hour22`, `hour23`,`hour24`,`hour25` FROM `wanbu`.`wanbu_data_walkhour` WHERE `userid` = ? AND `walkdate` = ? "
 	rows := db.QueryRow(sql_, userid, walkdate)
-	err = rows.Scan(&wh[0], &wh[1], &wh[2], &wh[3], &wh[4], &wh[5], &wh[6], &wh[7], &wh[8], &wh[9], &wh[10], &wh[11], &wh[12], &wh[13], &wh[14], &wh[15], &wh[16], &wh[17], &wh[18], &wh[19], &wh[20], &wh[21], &wh[22], &wh[23])
+	err = rows.Scan(&wh[0], &wh[1], &wh[2], &wh[3], &wh[4], &wh[5], &wh[6], &wh[7], &wh[8], &wh[9], &wh[10], &wh[11], &wh[12], &wh[13], &wh[14], &wh[15], &wh[16], &wh[17], &wh[18], &wh[19], &wh[20], &wh[21], &wh[22], &wh[23], &wh[24], &wh[25])
 	sum = 0
 	for index, h := range wh {
 		tmpv := strings.Split(h, ",")
@@ -151,7 +151,9 @@ func GetWalkHour(userid int, walkdate int64) (wh_ []int, sum int, err error) {
 			step2, err2 := strconv.Atoi(tmpv[2])
 			if err1 == nil && err2 == nil {
 				wh_[index] = step1 + step2
-				sum += wh_[index]
+				if index > 1 {
+					sum += wh_[index]
+				}
 			} else {
 				Logger.Debug("Error Transfer User Walk Hour Data", userid, walkdate)
 			}
@@ -159,7 +161,9 @@ func GetWalkHour(userid int, walkdate int64) (wh_ []int, sum int, err error) {
 			steps, err := strconv.Atoi(tmpv[0])
 			if err == nil {
 				wh_[index] = steps
-				sum += wh_[index]
+				if index > 1 {
+					sum += wh_[index]
+				}
 			} else {
 				Logger.Debug("Error Transfer User Walk Hour Data", userid, walkdate)
 			}
